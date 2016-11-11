@@ -29,7 +29,7 @@ param(
     [Parameter(Mandatory=$false)]
     [string]$dataFolderPath,     # The path to the Sitecore data folder.     
     [Parameter(Mandatory=$false)]
-    [string]$stepsString="123456789",     # Optional string specifying steps to apply. 
+    [string]$stepsString="123456789")     # Optional string specifying steps to apply. 
 
         
 
