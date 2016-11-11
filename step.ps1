@@ -25,7 +25,12 @@ param(
     [Parameter(Mandatory=$false)]
     [string]$extraInclude,  # The subpath to the folder where the extra included files will be 
     [Parameter(Mandatory=$false)]
-    [string]$role="cm")  # The role the instance has. One of CM or CD
+    [string]$role="cm",  # The role the instance has. One of CM or CD
+    [Parameter(Mandatory=$false)]
+    [string]$dataFolderPath,     # The path to the Sitecore data folder.     
+    [Parameter(Mandatory=$false)]
+    [string]$stepsString="123456789",     # Optional string specifying steps to apply. 
+
         
 
 
@@ -44,220 +49,303 @@ $webConfigPath = "{0}\web.config" -f $site.physicalPath
 # Deny anonymous users access to key folders 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-$filterString = "/system.Webserver/security/authentication/anonymousauthentication"
-$app_ConfigLocation = "{0}/App_Config" -f $siteName
-$adminLocation = "{0}/sitecore/admin" -f $siteName
-$debugLocation = "{0}/sitecore/debug" -f $siteName
-$ShellWebserviceLocation = "{0}/sitecore/shell/webservice" -f $siteName
-Set-WebConfigurationProperty -filter $filterString -name enabled -value false -Location $app_ConfigLocation
-Set-WebConfigurationProperty -filter $filterString -name enabled -value false -Location $adminLocation
-Set-WebConfigurationProperty -filter $filterString -name enabled -value false -Location $debugLocation
-Set-WebConfigurationProperty -filter $filterString -name enabled -value false -Location $ShellWebserviceLocation
+if ( $stepsString.Contains("1") )
+{
+    $filterString = "/system.Webserver/security/authentication/anonymousauthentication"
+    $app_ConfigLocation = "{0}/App_Config" -f $siteName
+    $adminLocation = "{0}/sitecore/admin" -f $siteName
+    $debugLocation = "{0}/sitecore/debug" -f $siteName
+    $ShellWebserviceLocation = "{0}/sitecore/shell/webservice" -f $siteName
+    Set-WebConfigurationProperty -filter $filterString -name enabled -value false -Location $app_ConfigLocation
+    Set-WebConfigurationProperty -filter $filterString -name enabled -value false -Location $adminLocation
+    Set-WebConfigurationProperty -filter $filterString -name enabled -value false -Location $debugLocation
+    Set-WebConfigurationProperty -filter $filterString -name enabled -value false -Location $ShellWebserviceLocation
 
-Write-Output "Step 1 completed - Deny anonymous users access to key folders"
+    Write-Output "Step 1 completed - Deny anonymous users access to key folders"
+}
+else 
+{
+    Write-Output "Step 1 skipped - Not in stepsStrings variable"
+}
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ STEP 2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Disable client RSS feeds
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-[xml] $webConfigXML = Get-Content $webConfigPath
-#remove the following handler in the <httpHanderls> section in the web.config
-$targetName = "Sitecore.FeedRequestHandler"
-$nodePath = "configuration/system.webServer/handlers/add[@name='{0}']" -f $targetName
-$node = $webConfigXML.SelectSingleNode($nodePath)
-if($node -ne $null)
+if ( $stepsString.Contains("2") )
 {
-    $webConfigXML.configuration.'system.webServer'.handlers.RemoveChild($node)
-}
-$webConfigXML.Save($webConfigPath)
+	[xml] $webConfigXML = Get-Content $webConfigPath
+	#remove the following handler in the <httpHanderls> section in the web.config
+	$targetName = "Sitecore.FeedRequestHandler"
+	$nodePath = "configuration/system.webServer/handlers/add[@name='{0}']" -f $targetName
+	$node = $webConfigXML.SelectSingleNode($nodePath)
+	if($node -ne $null)
+	{
+		$webConfigXML.configuration.'system.webServer'.handlers.RemoveChild($node)
+	}
+	$webConfigXML.Save($webConfigPath)
 
-Write-Output "Step 2 completed - Disable client RSS feeds"
+	Write-Output "Step 2 completed - Disable client RSS feeds"
+
+}
+else 
+{
+    Write-Output "Step 2 skipped - Not in stepsStrings variable"
+}
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ STEP 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Secure the file upload functionality
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#Deny Script and Execute permission on /upload folder
-$psPath = "MACHINE/WEBROOT/APPHOST/{0}/upload" -f $site.name
-$filter = "system.webServer/handlers/@AccessPolicy"
-Set-WebConfiguration -Filter $filter -Value "Read" -PSPath $psPath
-
-#Deny Script and Execute permission on /temp folder
-$psPath = "MACHINE/WEBROOT/APPHOST/{0}/temp" -f $site.name
-$filter = "system.webServer/handlers/@AccessPolicy"
-Set-WebConfiguration -Filter $filter -Value "Read" -PSPath $psPath
-
-#Remove the SitecoreUploadWatcher         
-$xml = [xml](get-content $webConfigPath) 
-foreach( $item in  $xml.configuration."system.webServer".modules.add )             
+if ( $stepsString.Contains("3") )
 {
-        if( $item.name -eq "SitecoreUploadWatcher" )                                                 
-        {
-              $xml.configuration."system.webServer".modules.RemoveChild($item);   
-        }
+
+	#Deny Script and Execute permission on /upload folder
+	$psPath = "MACHINE/WEBROOT/APPHOST/{0}/upload" -f $site.name
+	$filter = "system.webServer/handlers/@AccessPolicy"
+	Set-WebConfiguration -Filter $filter -Value "Read" -PSPath $psPath
+
+	#Deny Script and Execute permission on /temp folder
+	$psPath = "MACHINE/WEBROOT/APPHOST/{0}/temp" -f $site.name
+	$filter = "system.webServer/handlers/@AccessPolicy"
+	Set-WebConfiguration -Filter $filter -Value "Read" -PSPath $psPath
+
+	#Remove the SitecoreUploadWatcher         
+	$xml = [xml](get-content $webConfigPath) 
+	foreach( $item in  $xml.configuration."system.webServer".modules.add )             
+	{
+			if( $item.name -eq "SitecoreUploadWatcher" )                                                 
+			{
+				  $xml.configuration."system.webServer".modules.RemoveChild($item);   
+			}
+	}
+
+	$xml.Save($webConfigPath) 
+
+
+	#if( !(test-path "C:\localStaging") )
+	#{
+	#    mkdir "C:\localStaging"
+	#}
+
+	#Setup the UploadFilter (.dll and .config)
+	#$sitecoreRoot = $site.physicalPath                        		
+	#$cdnDistroUrl = "we.store.in.CDN.rackcdn.com"				
+	#$downLoadURI = "http://{0}/SitecoreInstalls/UploadFilter.config" -f $cdnDistroUrl
+	#$downLoadZipPath1 = "C:\localStaging\SecurityHardening.UploadFilter.config"
+	#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadZipPath
+
+	#$downLoadURI = "http://{0}/SitecoreInstalls/Sitecore.UploadFilter.dll" -f $cdnDistroUrl
+	#$downLoadZipPath2 = "C:\localStaging\Sitecore.UploadFilter.dll"
+	#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadZipPath
+
+	$WebsiteBin = "{0}\bin" -f $sitecoreRoot 
+	Copy-Item -Path .\UploadFilter.config -Destination $extraInclude
+	Copy-Item -Path .\Sitecore.UploadFilter.dll -Destination $WebsiteBin
+	 
+	Write-Output "Step 3 completed - Secure the file upload functionality"
+
 }
-
-$xml.Save($webConfigPath) 
-
-
-#if( !(test-path "C:\localStaging") )
-#{
-#    mkdir "C:\localStaging"
-#}
-
-#Setup the UploadFilter (.dll and .config)
-#$sitecoreRoot = $site.physicalPath                        		
-#$cdnDistroUrl = "we.store.in.CDN.rackcdn.com"				
-#$downLoadURI = "http://{0}/SitecoreInstalls/UploadFilter.config" -f $cdnDistroUrl
-#$downLoadZipPath1 = "C:\localStaging\SecurityHardening.UploadFilter.config"
-#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadZipPath
-
-#$downLoadURI = "http://{0}/SitecoreInstalls/Sitecore.UploadFilter.dll" -f $cdnDistroUrl
-#$downLoadZipPath2 = "C:\localStaging\Sitecore.UploadFilter.dll"
-#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadZipPath
-
-$WebsiteBin = "{0}\Website\bin" -f $sitecoreRoot 
-$WebsiteConfig = "{0}\Website\app_config\include" -f $sitecoreRoot 
-Copy-Item -Path .\UploadFilter.xml -Destination $WebsiteConfig
-Copy-Item -Path .\Sitecore.UploadFilter.dll -Destination $WebsiteBin
- 
-Write-Output "Step 3 completed - Secure the file upload functionality"
+else 
+{
+    Write-Output "Step 3 skipped - Not in stepsStrings variable"
+}
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ STEP 4 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Improve the security of the website folder
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#This is mostly handled during our scripted install; this is a snippet from those procedures
-<# $sitecoreDataDirectory = "D:/outside/of/webroot"
-$sitecoreAppIncludeDirectory = "{0}\app_config\include" -f $sitecoreRoot 
-$rackspaceInclude = $sitecoreAppIncludeDirectory + "\Z.Rackspace"
-
-if( !(test-path $rackspaceInclude) )
+if ( $stepsString.Contains("4") )
 {
-    mkdir $rackspaceInclude
+
+	#This is mostly handled during our scripted install; this is a snippet from those procedures
+	<# $sitecoreDataDirectory = "D:/outside/of/webroot"
+	$sitecoreAppIncludeDirectory = "{0}\app_config\include" -f $sitecoreRoot 
+	$rackspaceInclude = $sitecoreAppIncludeDirectory + "\Z.Rackspace"
+
+	if( !(test-path $rackspaceInclude) )
+	{
+		mkdir $rackspaceInclude
+	}
+
+
+	$dataFolderConfigPath = "{0}\DataFolder.config.example" -f $sitecoreAppIncludeDirectory
+	[xml]$dataConfigXML = Get-Content $dataFolderConfigPath
+	$dataConfigXML.configuration.sitecore.'sc.variable'.attribute.'#text' = $sitecoreDataDirectory
+	$dataConfigXML.Save($dataFolderConfigPath)
+	$newFilename = (Get-ChildItem $dataFolderConfigPath).BaseName
+	Rename-Item -Path $dataFolderConfigPath -NewName $newFilename #>
+
+	Write-Output "Step 4 completed - Improve the security of the website folder. Handled on Octopus Step 'Set up Data Folder'"
+
 }
-
-
-$dataFolderConfigPath = "{0}\DataFolder.config.example" -f $sitecoreAppIncludeDirectory
-[xml]$dataConfigXML = Get-Content $dataFolderConfigPath
-$dataConfigXML.configuration.sitecore.'sc.variable'.attribute.'#text' = $sitecoreDataDirectory
-$dataConfigXML.Save($dataFolderConfigPath)
-$newFilename = (Get-ChildItem $dataFolderConfigPath).BaseName
-Rename-Item -Path $dataFolderConfigPath -NewName $newFilename #>
-
-Write-Output "Step 4 completed - Improve the security of the website folder. Handled on Octopus Step 'Set up Data Folder'"
+else 
+{
+    Write-Output "Step 4 skipped - Not in stepsStrings variable"
+}
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ STEP 5 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Increase login security
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# this .config is what we're applying: https://gist.github.com/grant-killian/b64aa6cabd18e9b0097257ee4a2dc614
-#$downLoadURI = "https://gist.githubusercontent.com/grant-killian/b64aa6cabd18e9b0097257ee4a2dc614/raw"
-#$downLoadPath = "C:\localStaging\Rackspace.SecurityHardening.Step5.IncreaseLoginSecurity.config"
-#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadPath
 
-#Copy-Item -Path $downLoadPath -Destination $rackspaceInclude #we use a "Z.Rackspace" directory under /app_config/include
-Copy-Item -Path .\IncreaseLoginSecurity.config -Destination $extraInclude
+if ( $stepsString.Contains("5") )
+{
 
-Write-Output "Step 5 completed - Increase login security"
+	# this .config is what we're applying: https://gist.github.com/grant-killian/b64aa6cabd18e9b0097257ee4a2dc614
+	#$downLoadURI = "https://gist.githubusercontent.com/grant-killian/b64aa6cabd18e9b0097257ee4a2dc614/raw"
+	#$downLoadPath = "C:\localStaging\Rackspace.SecurityHardening.Step5.IncreaseLoginSecurity.config"
+	#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadPath
 
+	#Copy-Item -Path $downLoadPath -Destination $rackspaceInclude #we use a "Z.Rackspace" directory under /app_config/include
+	Copy-Item -Path .\IncreaseLoginSecurity.config -Destination $extraInclude
+
+	Write-Output "Step 5 completed - Increase login security"
+
+}
+else 
+{
+    Write-Output "Step 5 skipped - Not in stepsStrings variable"
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ STEP 6 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Limit access to certain file types
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-$psPath = "MACHINE/WEBROOT/APPHOST/{0}" -f $site.name
-$filter = "system.webServer/handlers/"
-if ( (Get-WebHandler -Name "xml (integrated)" -PSPath $psPath).name -eq $null )
-    { New-WebHandler -Path *.xml -Verb * -Type "System.Web.HttpForbiddenHandler" -Name "xml (integrated)" -Precondition integratedMode -PSPath $psPath }
-if ( (Get-WebHandler -Name "xslt (integrate)" -PSPath $psPath).name -eq $null )
-    { New-WebHandler -Path *.xslt -Verb * -Type "System.Web.HttpForbiddenHandler" -Name "xslt (integrate)" -Precondition integratedMode -PSPath $psPath }
-if ( (Get-WebHandler -Name "config.xml (integrate)" -PSPath $psPath).name -eq $null )
-    { New-WebHandler -Path *.config.xml -Verb * -Type "System.Web.HttpForbiddenHandler" -Name "config.xml (integrate)" -Precondition integratedMode -PSPath $psPath }
-if ( (Get-WebHandler -Name "mrt (integrate)" -PSPath $psPath).name -eq $null )
-    { New-WebHandler -Path *.mrt -Verb * -Type "System.Web.HttpForbiddenHandler" -Name "mrt (integrate)" -Precondition integratedMode -PSPath $psPath }
-    
-Write-Output "Step 6 completed"
 
+if ( $stepsString.Contains("6") )
+{
+	$psPath = "MACHINE/WEBROOT/APPHOST/{0}" -f $site.name
+	$filter = "system.webServer/handlers/"
+	if ( (Get-WebHandler -Name "xml (integrated)" -PSPath $psPath).name -eq $null )
+		{ New-WebHandler -Path *.xml -Verb * -Type "System.Web.HttpForbiddenHandler" -Name "xml (integrated)" -Precondition integratedMode -PSPath $psPath }
+	if ( (Get-WebHandler -Name "xslt (integrate)" -PSPath $psPath).name -eq $null )
+		{ New-WebHandler -Path *.xslt -Verb * -Type "System.Web.HttpForbiddenHandler" -Name "xslt (integrate)" -Precondition integratedMode -PSPath $psPath }
+	if ( (Get-WebHandler -Name "config.xml (integrate)" -PSPath $psPath).name -eq $null )
+		{ New-WebHandler -Path *.config.xml -Verb * -Type "System.Web.HttpForbiddenHandler" -Name "config.xml (integrate)" -Precondition integratedMode -PSPath $psPath }
+	if ( (Get-WebHandler -Name "mrt (integrate)" -PSPath $psPath).name -eq $null )
+		{ New-WebHandler -Path *.mrt -Verb * -Type "System.Web.HttpForbiddenHandler" -Name "mrt (integrate)" -Precondition integratedMode -PSPath $psPath }
+		
+	Write-Output "Step 6 completed - Limit access to certain file types"
+
+}
+else 
+{
+    Write-Output "Step 6 skipped - Not in stepsStrings variable"
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ STEP 7 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Protect PhantomJS --generally not suitable for Content Management (CM) servers
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if ( $role.ToUpper() -ne "CM" )
+
+if ( $stepsString.Contains("7") )
 {
-    $dataFolderConfigPath = "{0}\App_Config\Include\DataFolder.config" -f $site.physicalPath
-    [xml] $dataFolderConfigXML = Get-Content $dataFolderConfigPath
-    $dataFolderValue = $dataFolderConfigXML.configuration.sitecore.'sc.variable'.attribute.'#text'
-    $phantomToolPath = "{0}\tools\phantomjs" -f $dataFolderValue
-    Remove-Item -Recurse -Path $phantomToolPath
+	if ( $role.ToUpper() -ne "CM" )
+	{
+		$dataFolderValue = "";
+		if ( $dataFolderPath -eq $null  -or $dataFolderPath -eq "" )
+		{
+			$dataFolderConfigPath = "{0}\App_Config\Include\DataFolder.config" -f $site.physicalPath
+			[xml] $dataFolderConfigXML = Get-Content $dataFolderConfigPath
+			$dataFolderValue = $dataFolderConfigXML.configuration.sitecore.'sc.variable'.attribute.'#text'
+		}
+		else
+		{
+			$dataFolderValue = $dataFolderPath
+		}
+		$phantomToolPath = "{0}\tools\phantomjs" -f $dataFolderValue
+		Remove-Item -Recurse -Path $phantomToolPath
 
 
-    # this .config is what we're applying: https://gist.github.com/grant-killian/16b9ec61190d43441fbca9007167feef
-    #$downLoadURI = "https://gist.githubusercontent.com/grant-killian/16b9ec61190d43441fbca9007167feef/raw"
-    #$downLoadPath = "C:\localStaging\Rackspace.SecurityHardening.Step7.ProtectPhantomJS.config"
-    $downLoadPath = ".\ProtectPhantomJS.config"
-    Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadPath
-    Copy-Item -Path $downLoadPath -Destination $rackspaceInclude #we use a "Z.Rackspace" directory under /app_config/include 
+
+		# this .config is what we're applying: https://gist.github.com/grant-killian/16b9ec61190d43441fbca9007167feef
+		#$downLoadURI = "https://gist.githubusercontent.com/grant-killian/16b9ec61190d43441fbca9007167feef/raw"
+		#$downLoadPath = "C:\localStaging\Rackspace.SecurityHardening.Step7.ProtectPhantomJS.config"
+		$downLoadPath = ".\ProtectPhantomJS.config"
+		Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadPath
+		Copy-Item -Path $downLoadPath -Destination $rackspaceInclude #we use a "Z.Rackspace" directory under /app_config/include 
+	}
+	else
+	{
+		Write-Output "Step 7 skipped as this is a CM instance"
+	}
+
+	   Write-Output "Step 7 completed - Protect PhantomJS"
+
 }
-else
+else 
 {
-    Write-Output "Step 7 skipped as this is a CM instance"
+    Write-Output "Step 7 skipped - Not in stepsStrings variable"
 }
-
-   Write-Output "Step 7 completed - Protect PhantomJS"
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ STEP 8 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Protect Media Requests
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# this .config is what we're applying: https://gist.github.com/grant-killian/136b165ed632acf799ba95f9b91578bb
-#$downLoadURI = "https://gist.githubusercontent.com/grant-killian/136b165ed632acf799ba95f9b91578bb/raw"
-#$downLoadPath = "C:\localStaging\Rackspace.SecurityHardening.Step8.ProtectMediaRequests.config"
-#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadPath
+if ( $stepsString.Contains("8") )
+{
 
-#set the implementation guid -- the gist just has a placeholder
-$downLoadPath = ".\ProtectMediaRequests.config"
-(Get-Content $downLoadPath).replace($mediaRequestSharedSecretGuid, "58d36579-94c3-42d8-802f-b7cc62121d47") | Set-Content $downLoadPath
+	# this .config is what we're applying: https://gist.github.com/grant-killian/136b165ed632acf799ba95f9b91578bb
+	#$downLoadURI = "https://gist.githubusercontent.com/grant-killian/136b165ed632acf799ba95f9b91578bb/raw"
+	#$downLoadPath = "C:\localStaging\Rackspace.SecurityHardening.Step8.ProtectMediaRequests.config"
+	#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadPath
 
-Copy-Item -Path $downLoadPath -Destination $extraInclude 
+	#set the implementation guid -- the gist just has a placeholder
+	$downLoadPath = ".\ProtectMediaRequests.config"
+	(Get-Content $downLoadPath).replace($mediaRequestSharedSecretGuid, "58d36579-94c3-42d8-802f-b7cc62121d47") | Set-Content $downLoadPath
 
-Write-Output "Step 8 completed - Protect Media Requests"
+	Copy-Item -Path $downLoadPath -Destination $extraInclude 
 
+	Write-Output "Step 8 completed - Protect Media Requests"
+
+}
+else 
+{
+    Write-Output "Step 8 skipped - Not in stepsStrings variable"
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ STEP 9 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Remove header information from responses sent by your website
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-$webConfigPath = "{0}\web.config" -f $site.physicalPath
-[xml]$webConfigXML = Get-Content $webConfigPath
-#Remove the X-Aspnet-Version HTTP header
-$webConfigXML.configuration.'system.web'.httpRuntime.SetAttribute("enableVersionHeader","false")
-$webConfigXML.Save($webConfigPath)
+if ( $stepsString.Contains("9") )
+{
 
-#Remove the X-Powered-By Http header
-$psPath = "MACHINE/WEBROOT/APPHOST/{0}" -f $site.name
-$filter = "system.webServer/httpProtocol/customHeaders"
-Remove-WebConfigurationProperty -PSPath $psPath -Filter $filter -Name . -AtElement @{name='X-Powered-By'}
+	$webConfigPath = "{0}\web.config" -f $site.physicalPath
+	[xml]$webConfigXML = Get-Content $webConfigPath
+	#Remove the X-Aspnet-Version HTTP header
+	$webConfigXML.configuration.'system.web'.httpRuntime.SetAttribute("enableVersionHeader","false")
+	$webConfigXML.Save($webConfigPath)
 
-#Reminder to apply this one through implementation code
+	#Remove the X-Powered-By Http header
+	$psPath = "MACHINE/WEBROOT/APPHOST/{0}" -f $site.name
+	$filter = "system.webServer/httpProtocol/customHeaders"
+	Remove-WebConfigurationProperty -PSPath $psPath -Filter $filter -Name . -AtElement @{name='X-Powered-By'}
+
+	#Reminder to apply this one through implementation code
 
 $caveat = @"
-  Missing change from the Sitecore recommendations regarding 'Remove the X-AspNetMvc-Version HTTP header'
-     -this is an implementation specific element that should come from source control etc
-     consider an HTTP Module (instead of Global.asax)
-     See the bottom of Akshay Sura's post for details:
-        http://www.akshaysura.com/2016/08/02/secure-sitecore-headers-are-a-headache-but-nothing-we-cannot-solve/
-  Do not forget this step!
+	Missing change from the Sitecore recommendations regarding 'Remove the X-AspNetMvc-Version HTTP header'
+		-this is an implementation specific element that should come from source control etc
+		consider an HTTP Module (instead of Global.asax)
+		See the bottom of Akshay Sura's post for details:
+			http://www.akshaysura.com/2016/08/02/secure-sitecore-headers-are-a-headache-but-nothing-we-cannot-solve/
+	Do not forget this step!
 "@
 
-Write-Host $caveat -ForegroundColor DarkYellow
+	Write-Host $caveat -ForegroundColor DarkYellow
+	
+	Write-Output "Step 9 completed - Remove header information from responses sent by your website"
 
-Write-Output "Step 9 completed - Remove header information from responses sent by your website"
+}
+else 
+{
+    Write-Output "Step 9 skipped - Not in stepsStrings variable"
+}
 
 Write-Host "Security hardening completed" -ForegroundColor Green
