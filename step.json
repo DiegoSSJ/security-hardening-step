@@ -3,14 +3,14 @@
   "Name": "Apply Security Hardening guidelines",
   "Description": "Applies the Security hardening guidelines as specified by Sitecore.\n\nSee \nhttps://doc.sitecore.net/sitecore_experience_platform/81/setting_up__maintaining/security_hardening",
   "ActionType": "Octopus.Script",
-  "Version": 5,
+  "Version": 6,
   "Properties": {
     "Octopus.Action.Script.ScriptSource": "Package",
     "Octopus.Action.RunOnServer": "false",
     "Octopus.Action.Script.ScriptFileName": "step.ps1",
     "Octopus.Action.Package.FeedId": "feeds-builtin",
     "Octopus.Action.Package.PackageId": "security-hardening-step",
-    "Octopus.Action.Script.ScriptParameters": "-siteName #{webSiteName} -mediaRequestSharedSecretGuid #{mediaSharedSecret} -role  #{Octopus.Machine.Roles} -stepsString #{stepsString}#{stepsString}#{stepsString}",
+    "Octopus.Action.Script.ScriptParameters": "-siteName #{webSiteName} -mediaRequestSharedSecretGuid #{mediaSharedSecret} -role  #{Octopus.Machine.Roles} -stepsString #{stepsString}",
     "Octopus.Action.Script.Syntax": null,
     "Octopus.Action.Script.ScriptBody": null
   },
@@ -77,7 +77,7 @@
     }
   ],
   "$Meta": {
-    "ExportedAt": "2016-11-11T14:15:28.998Z",
+    "ExportedAt": "2016-11-11T14:27:20.027Z",
     "OctopusVersion": "3.4.12",
     "Type": "ActionTemplate"
   }
