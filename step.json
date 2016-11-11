@@ -1,0 +1,84 @@
+{
+  "Id": "ActionTemplates-26",
+  "Name": "Apply Security Hardening guidelines",
+  "Description": "Applies the Security hardening guidelines as specified by Sitecore.\n\nSee \nhttps://doc.sitecore.net/sitecore_experience_platform/81/setting_up__maintaining/security_hardening",
+  "ActionType": "Octopus.Script",
+  "Version": 4,
+  "Properties": {
+    "Octopus.Action.Script.ScriptSource": "Package",
+    "Octopus.Action.RunOnServer": "false",
+    "Octopus.Action.Script.ScriptFileName": "step.ps1",
+    "Octopus.Action.Package.FeedId": "feeds-builtin",
+    "Octopus.Action.Package.PackageId": "security-hardening-step",
+    "Octopus.Action.Script.ScriptParameters": "-siteName #{webSiteName} -mediaRequestSharedSecretGuid #{mediaSharedSecret} -role  #{Octopus.Machine.Roles}",
+    "Octopus.Action.Script.Syntax": null,
+    "Octopus.Action.Script.ScriptBody": null
+  },
+  "Parameters": [
+    {
+      "Id": "221bfbc1-fef9-43ae-89cc-ef8d8a7b9ffb",
+      "Name": "siteName",
+      "Label": "Site Name",
+      "HelpText": "The name of the site to apply the security hardening guides to.",
+      "DefaultValue": "",
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "e9e6877c-c2b5-4b62-9d3c-95b7221284e7",
+      "Name": "mediaRequestSharedSecretGuid",
+      "Label": "Media Request Shared Secret",
+      "HelpText": "Guid value for the Sitecore Media.SharedSecret setting.",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "952e9cb7-17ac-4b24-9d84-3d1a1217b898",
+      "Name": "role",
+      "Label": "Role",
+      "HelpText": "The role the machine has. This parameter only affects CM machines in the sense that the phantom js is only excluded for them.",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "a20d944a-c13c-4dd4-964f-4b157284c219",
+      "Name": "extraInclude",
+      "Label": "Extra Include Path",
+      "HelpText": "Path to a folder containing extra included Sitecore configuration files. The additional configuration files required by this security hardening step will be copied there. If you leave this empty, the path Website\\App_Config\\include\\zz will be used.",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "c225f4fc-2e09-4dba-a1d3-47409590250d",
+      "Name": "dataFolderPath",
+      "Label": "Data Folder Path",
+      "HelpText": "The path to the data folder. If not specified the script will try to get it from App_Config\\Include\\DataFolder.config",
+      "DefaultValue": null,
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    },
+    {
+      "Id": "aa3e31c1-f73e-462d-9331-2f98b5f897d0",
+      "Name": "stepsString",
+      "Label": "Steps String",
+      "HelpText": "This string specifies which steps will be applied. You specify the steps by nr on the string. Ex, for all steps you would give \"123456789\" as parameter. If you want to avoid step 1 then \"23456789\", etc.",
+      "DefaultValue": "123456789",
+      "DisplaySettings": {
+        "Octopus.ControlType": "SingleLineText"
+      }
+    }
+  ],
+  "$Meta": {
+    "ExportedAt": "2016-11-11T13:05:46.756Z",
+    "OctopusVersion": "3.4.12",
+    "Type": "ActionTemplate"
+  }
+}
