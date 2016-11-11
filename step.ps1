@@ -1,5 +1,6 @@
 <# 
 Author(s): Bruce Lee, Grant Killian, Kelly Rusk, Jimmy Rudley
+Colaborator: Diego Saavedra San Juan
 Created Date: August 4, 2016
 Modified Date: August 5, 2016
 This is the Rackspace Managed Services for Sitecore (https://www.rackspace.com/digital/sitecore) script for security hardening a Sitecore environment 
@@ -32,9 +33,6 @@ param(
     [string]$stepsString="123456789")     # Optional string specifying steps to apply. 
 
         
-
-
-#$siteNamePrompt = Read-Host "enter website name"
 $site = get-website -name $siteName
 $sitecoreRoot = $site.physicalPath   
 $sitecoreAppIncludeDirectory = "{0}\app_config\include" -f $sitecoreRoot 
@@ -44,6 +42,7 @@ if ( $extraInclude -eq $null -or $extraInclude -eq "" )
 # read in Web.config
 $webConfigPath = "{0}\web.config" -f $site.physicalPath
 
+Write-Host 'Steps string is '$stepsString 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ STEP 1 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Deny anonymous users access to key folders 
@@ -124,24 +123,7 @@ if ( $stepsString.Contains("3") )
 
 	$xml.Save($webConfigPath) 
 
-
-	#if( !(test-path "C:\localStaging") )
-	#{
-	#    mkdir "C:\localStaging"
-	#}
-
-	#Setup the UploadFilter (.dll and .config)
-	#$sitecoreRoot = $site.physicalPath                        		
-	#$cdnDistroUrl = "we.store.in.CDN.rackcdn.com"				
-	#$downLoadURI = "http://{0}/SitecoreInstalls/UploadFilter.config" -f $cdnDistroUrl
-	#$downLoadZipPath1 = "C:\localStaging\SecurityHardening.UploadFilter.config"
-	#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadZipPath
-
-	#$downLoadURI = "http://{0}/SitecoreInstalls/Sitecore.UploadFilter.dll" -f $cdnDistroUrl
-	#$downLoadZipPath2 = "C:\localStaging\Sitecore.UploadFilter.dll"
-	#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadZipPath
-
-	$WebsiteBin = "{0}\bin" -f $sitecoreRoot 
+    $WebsiteBin = "{0}\bin" -f $sitecoreRoot 
 	Copy-Item -Path .\UploadFilter.config -Destination $extraInclude
 	Copy-Item -Path .\Sitecore.UploadFilter.dll -Destination $WebsiteBin
 	 
@@ -195,17 +177,9 @@ else
 
 if ( $stepsString.Contains("5") )
 {
-
-	# this .config is what we're applying: https://gist.github.com/grant-killian/b64aa6cabd18e9b0097257ee4a2dc614
-	#$downLoadURI = "https://gist.githubusercontent.com/grant-killian/b64aa6cabd18e9b0097257ee4a2dc614/raw"
-	#$downLoadPath = "C:\localStaging\Rackspace.SecurityHardening.Step5.IncreaseLoginSecurity.config"
-	#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadPath
-
-	#Copy-Item -Path $downLoadPath -Destination $rackspaceInclude #we use a "Z.Rackspace" directory under /app_config/include
 	Copy-Item -Path .\IncreaseLoginSecurity.config -Destination $extraInclude
 
 	Write-Output "Step 5 completed - Increase login security"
-
 }
 else 
 {
@@ -261,11 +235,6 @@ if ( $stepsString.Contains("7") )
 		$phantomToolPath = "{0}\tools\phantomjs" -f $dataFolderValue
 		Remove-Item -Recurse -Path $phantomToolPath
 
-
-
-		# this .config is what we're applying: https://gist.github.com/grant-killian/16b9ec61190d43441fbca9007167feef
-		#$downLoadURI = "https://gist.githubusercontent.com/grant-killian/16b9ec61190d43441fbca9007167feef/raw"
-		#$downLoadPath = "C:\localStaging\Rackspace.SecurityHardening.Step7.ProtectPhantomJS.config"
 		$downLoadPath = ".\ProtectPhantomJS.config"
 		Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadPath
 		Copy-Item -Path $downLoadPath -Destination $rackspaceInclude #we use a "Z.Rackspace" directory under /app_config/include 
@@ -289,12 +258,6 @@ else
 
 if ( $stepsString.Contains("8") )
 {
-
-	# this .config is what we're applying: https://gist.github.com/grant-killian/136b165ed632acf799ba95f9b91578bb
-	#$downLoadURI = "https://gist.githubusercontent.com/grant-killian/136b165ed632acf799ba95f9b91578bb/raw"
-	#$downLoadPath = "C:\localStaging\Rackspace.SecurityHardening.Step8.ProtectMediaRequests.config"
-	#Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadPath
-
 	#set the implementation guid -- the gist just has a placeholder
 	$downLoadPath = ".\ProtectMediaRequests.config"
 	(Get-Content $downLoadPath).replace($mediaRequestSharedSecretGuid, "58d36579-94c3-42d8-802f-b7cc62121d47") | Set-Content $downLoadPath
