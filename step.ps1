@@ -233,18 +233,17 @@ if ( $stepsString.Contains("7") )
 			$dataFolderValue = $dataFolderLocation
 		}
 		$phantomToolPath = "{0}\tools\phantomjs" -f $dataFolderValue
-		Remove-Item -Recurse -Path $phantomToolPath
+		if ( Test-Path $phantomToolPath ) { Remove-Item -Recurse -Path $phantomToolPath }
 
-		$downLoadPath = ".\ProtectPhantomJS.config"
-		Invoke-WebRequest -Uri $downLoadURI -OutFile $downLoadPath
-		Copy-Item -Path $downLoadPath -Destination $rackspaceInclude #we use a "Z.Rackspace" directory under /app_config/include 
+		$ProtectPhantomJSPath = ".\ProtectPhantomJS.config"		
+		Copy-Item -Path $ProtectPhantomJSPath -Destination $extraInclude 
 	}
 	else
 	{
 		Write-Output "Step 7 skipped as this is a CM instance"
 	}
 
-	   Write-Output "Step 7 completed - Protect PhantomJS"
+	Write-Output "Step 7 completed - Protect PhantomJS"
 
 }
 else 
