@@ -28,7 +28,7 @@ param(
     [Parameter(Mandatory=$false)]
     [string]$role="cm",  # The role the instance has. One of CM or CD
     [Parameter(Mandatory=$false)]
-    [string]$dataFolderPath,     # The path to the Sitecore data folder.     
+    [string]$dataFolderLocation,     # The path to the Sitecore data folder.     
     [Parameter(Mandatory=$false)]
     [string]$stepsString="123456789")     # Optional string specifying steps to apply. 
 
@@ -222,7 +222,7 @@ if ( $stepsString.Contains("7") )
 	if ( $role.ToUpper() -ne "CM" )
 	{
 		$dataFolderValue = "";
-		if ( $dataFolderPath -eq $null  -or $dataFolderPath -eq "" )
+		if ( $dataFolderLocation -eq $null  -or $dataFolderLocation -eq "" )
 		{
 			$dataFolderConfigPath = "{0}\App_Config\Include\DataFolder.config" -f $site.physicalPath
 			[xml] $dataFolderConfigXML = Get-Content $dataFolderConfigPath
@@ -230,7 +230,7 @@ if ( $stepsString.Contains("7") )
 		}
 		else
 		{
-			$dataFolderValue = $dataFolderPath
+			$dataFolderValue = $dataFolderLocation
 		}
 		$phantomToolPath = "{0}\tools\phantomjs" -f $dataFolderValue
 		Remove-Item -Recurse -Path $phantomToolPath
